@@ -7,7 +7,6 @@
         executionOrder="random"
         failOnWarning="true"
         failOnRisky="true"
-        failOnEmptyTestSuite="true"
         beStrictAboutOutputDuringTests="true"
         verbose="true"
 >
@@ -16,10 +15,4 @@
             <directory>./tests</directory>
         </testsuite>
     </testsuites>
-    <coverage includeUncoveredFiles="false"
-              ignoreDeprecatedCodeUnits="true">
-        <include>
-            <directory suffix=".php">src</directory>
-        </include>
-    </coverage>
 </phpunit>

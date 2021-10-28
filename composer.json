@@ -1,5 +1,5 @@
 {
-    "name": "hyqo/",
+    "name": "hyqo/cache",
     "description": "",
     "keywords": [
     ],
@@ -11,14 +11,19 @@
         }
     ],
     "require": {
-        "php": ">=8.0"
+        "php": "~7.2"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.0"
+        "phpunit/phpunit": "^8.0"
     },
     "autoload": {
         "psr-4": {
-            "Hyqo\\": "src"
+            "Hyqo\\Cache\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hyqo\\Cache\\Test\\": "tests"
         }
     }
 }
