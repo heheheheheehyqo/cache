@@ -8,6 +8,8 @@ jobs:
     services:
       memcached:
         image: memcached:alpine
+        ports:
+          - 11211:11211
 
     strategy:
       matrix:
