@@ -24,7 +24,7 @@ class MemcachedLayer implements Cache
             throw new \RuntimeException('ext-memcached doesn\'t not exist');
         }
 
-        $this->client = new \Memcached($namespace);
+        $this->client = new \Memcached();
 
         $this->client->addServer($matches['host'], $matches['port']);
 
