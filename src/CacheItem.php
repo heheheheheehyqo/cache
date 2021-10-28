@@ -13,6 +13,8 @@ class CacheItem
 
     private $isHit;
 
+    private $isLazy = false;
+
     private $expiry = 0;
 
     private $meta = [];
@@ -51,7 +53,7 @@ class CacheItem
 
     public function delete(): void
     {
-        $this->cache->delete($this->getKey());
+        $this->cache->deleteItem($this->getKey());
     }
 
     public function getMeta(string $key)
@@ -66,9 +68,21 @@ class CacheItem
         return $this;
     }
 
+    public function lazy(): self
+    {
+        $this->isLazy = true;
+
+        return $this;
+    }
+
     public function isHit(): bool
     {
         return $this->isHit;
+    }
+
+    public function isLazy(): bool
+    {
+        return $this->isLazy;
     }
 
     public function isExpired(): bool

@@ -65,7 +65,7 @@ class MemcachedLayerTest extends TestCase
             return 'another_value_for_delete';
         });
 
-        $cache->delete($another_item->getKey());
+        $cache->deleteItem($another_item->getKey());
 
         $this->assertFalse($cache->getItem('another_key_for_delete')->isHit());
     }
@@ -73,20 +73,23 @@ class MemcachedLayerTest extends TestCase
     public function test_multiple()
     {
         $cache = $this->createMemcachedLayer('multiple');
-        $amount = 100;
+        $amount = 1000;
+        $range = range(1, $amount);
 
-        for ($i = 1; $i <= $amount; $i++) {
-            $cache->getItem('key_' . $i, function () {
-                return 'bar';
-            });
+        $collection = $cache->getItems($range);
+
+        foreach ($range as $i) {
+            $collection->get($i)->lazy()->set('bar');
         }
 
-        for ($i = 1; $i <= $amount; $i++) {
-            $item = $cache->getItem('key_' . $i);
-            $item->delete();
+        $cache->persist();
 
-            $this->assertFalse($cache->getItem('key_' . $i)->isHit());
-        }
+        $this->assertTrue($cache->getItem($amount)->isHit());
+
+
+        $cache->deleteItems($range);
+
+        $this->assertFalse($cache->getItem($amount)->isHit());
     }
 
     public function test_expiry()
@@ -116,15 +119,21 @@ class MemcachedLayerTest extends TestCase
 
     public function test_flush()
     {
-        $cache = $this->createMemcachedLayer('flush');
+        $cacheFoo = $this->createMemcachedLayer('flush_foo');
+        $cacheBar = $this->createMemcachedLayer('flush_bar');
 
         for ($i = 1; $i <= random_int(5, 20); $i++) {
-            $cache->getItem('key' . $i, static function () use ($i) {
+            $cacheFoo->getItem('key' . $i, static function () use ($i) {
+                return $i;
+            });
+
+            $cacheBar->getItem('key' . $i, static function () use ($i) {
                 return $i;
             });
         }
 
-        $this->assertTrue($cache->flush());
+        $this->assertTrue($cacheFoo->flush());
+        $this->assertFalse($cacheBar->getItem('key1')->isHit());
     }
 
 }

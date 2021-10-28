@@ -6,6 +6,7 @@ use Closure;
 use Hyqo\Cache\Cache;
 use Hyqo\Cache\CacheItem;
 use Hyqo\Cache\Client\MemcachedPlaceholderClient;
+use Hyqo\Cache\Collection;
 
 class MemcachedLayer implements Cache
 {
@@ -13,6 +14,9 @@ class MemcachedLayer implements Cache
     private $client;
 
     private $expiresAfter;
+
+    /** @var CacheItem[] */
+    private $lazyStorage = [];
 
     public function __construct(string $namespace = '@', int $expiresAfter = 0, string $address = 'memcached:11211')
     {
@@ -28,6 +32,7 @@ class MemcachedLayer implements Cache
 
         if (!count($this->client->getServerList())) {
             $this->client->addServer($matches['host'], $matches['port']);
+//            var_dump($namespace, $this->client->getServerList());
         }
 
 
@@ -80,14 +85,50 @@ class MemcachedLayer implements Cache
         return $cacheItem;
     }
 
-    public function save(CacheItem $cacheItem): void
+    public function getItems(array $keys): Collection
     {
-        $this->client->set($cacheItem->getKey(), $cacheItem->get(), $cacheItem->getExpiry());
+        $items = [];
+
+        foreach ($this->client->getMulti($keys) as $key => $value) {
+            $items[] = new CacheItem($this, $key, $value, true);
+        }
+
+        return new Collection($this, $items);
     }
 
-    public function delete(string $key): void
+    public function save(CacheItem $cacheItem): void
     {
-        $this->client->delete($key);
+        if ($cacheItem->isLazy()) {
+            $this->lazyStorage[] = $cacheItem;
+        } else {
+            $this->client->set($cacheItem->getKey(), $cacheItem->get(), $cacheItem->getExpiry());
+        }
+    }
+
+    public function persist(): void
+    {
+        if (!count($this->lazyStorage)) {
+            return;
+        }
+
+        $pairs = [];
+        foreach ($this->lazyStorage as $cacheItem) {
+            $pairs[$cacheItem->getKey()] = $cacheItem->get();
+        }
+
+        $this->client->setMulti($pairs, $this->expiresAfter ? (time() + $this->expiresAfter) : $this->expiresAfter);
+
+        $this->lazyStorage = [];
+    }
+
+    public function deleteItem(string $key): bool
+    {
+        return $this->client->delete($key);
+    }
+
+    public function deleteItems(array $keys): bool
+    {
+        return count($keys) === count($this->client->deleteMulti($keys));
     }
 
     public function flush(): bool

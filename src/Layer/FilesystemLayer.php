@@ -4,6 +4,7 @@ namespace Hyqo\Cache\Layer;
 
 use Hyqo\Cache\Cache;
 use Hyqo\Cache\CacheItem;
+use Hyqo\Cache\Collection;
 use Hyqo\Cache\Traits\FilesystemTrait;
 
 class FilesystemLayer implements Cache
@@ -15,14 +16,28 @@ class FilesystemLayer implements Cache
         return $this->doFetch($key, $computeValue);
     }
 
+    public function getItems(array $keys): Collection
+    {
+        return $this->doFetchMulti($keys);
+    }
+
     public function save(CacheItem $cacheItem): void
     {
         $this->doSave($cacheItem);
     }
 
-    public function delete(string $key): void
+    public function persist(): void
     {
-        $this->doDelete($key);
+    }
+
+    public function deleteItem(string $key): bool
+    {
+        return $this->doDeleteItem($key);
+    }
+
+    public function deleteItems(array $keys): bool
+    {
+        return $this->doDeleteItems($keys);
     }
 
     public function flush(): bool

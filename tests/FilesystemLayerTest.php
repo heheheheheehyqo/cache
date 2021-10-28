@@ -1,4 +1,5 @@
 <?php
+
 namespace Hyqo\Cache\Test;
 
 use Hyqo\Cache\CacheItem;
@@ -14,13 +15,13 @@ class FilesystemLayerTest extends TestCase
         if (is_dir($this->cacheRoot)) {
             foreach ($this->scan($this->cacheRoot) as $file) {
                 if (is_dir($file)) {
-                    rmdir($file);
+                    @rmdir($file);
                 } else {
-                    unlink($file);
+                    @unlink($file);
                 }
             }
 
-            rmdir($this->cacheRoot);
+            @rmdir($this->cacheRoot);
         }
     }
 
@@ -79,28 +80,31 @@ class FilesystemLayerTest extends TestCase
             return 'another_value_for_delete';
         });
 
-        $cache->delete($another_item->getKey());
+        $cache->deleteItem($another_item->getKey());
 
         $this->assertFileNotExists($another_item->getMeta('file'));
     }
 
     public function test_multiple()
     {
-        $cache = new FilesystemLayer('stress', 0, $this->cacheRoot);
-        $amount = 10;
+        $cache = new FilesystemLayer('multiple', 0, $this->cacheRoot);
+        $amount = 1000;
+        $range = range(1, $amount);
 
-        for ($i = 1; $i <= $amount; $i++) {
-            $cache->getItem('key_' . $i, function () {
-                return 'bar';
-            });
+        $collection = $cache->getItems($range);
+
+        foreach ($range as $i) {
+            $collection->get($i)->lazy()->set('bar');
         }
 
-        for ($i = 1; $i <= $amount; $i++) {
-            $item = $cache->getItem('key_' . $i);
-            $item->delete();
+        $cache->persist();
 
-            $this->assertFileNotExists($item->getMeta('file'));
-        }
+        $this->assertTrue($cache->getItem($amount)->isHit());
+
+
+        $cache->deleteItems($range);
+
+        $this->assertFalse($cache->getItem($amount)->isHit());
     }
 
     public function test_expiry()

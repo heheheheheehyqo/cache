@@ -3,12 +3,16 @@
 namespace Hyqo\Cache\Traits;
 
 use Hyqo\Cache\CacheItem;
+use Hyqo\Cache\Collection;
 
 trait FilesystemTrait
 {
     private $directory;
 
     private $expiresAfter = 0;
+
+    /** @var CacheItem[] */
+    private $lazyStorage = [];
 
     public function __construct(?string $namespace = null, int $expiresAfter = 0, ?string $directory = null)
     {
@@ -37,7 +41,7 @@ trait FilesystemTrait
         return $this->directory . md5($key);
     }
 
-    public function doFetch(string $key, ?\Closure $computeValue): CacheItem
+    public function doFetch(string $key, ?\Closure $computeValue = null): CacheItem
     {
         $file = $this->getFile($key);
 
@@ -68,6 +72,16 @@ trait FilesystemTrait
         return $cacheItem;
     }
 
+    public function doFetchMulti(array $keys): Collection
+    {
+        $items = [];
+        foreach ($keys as $key) {
+            $items[] = $this->doFetch($key);
+        }
+
+        return new Collection($this, $items);
+    }
+
     public function doSave(CacheItem $cacheItem): void
     {
         $file = $this->getFile($cacheItem->getKey());
@@ -94,13 +108,22 @@ trait FilesystemTrait
         return [$expiresAt, $value];
     }
 
-    public function doDelete(string $key)
+    public function doDeleteItem(string $key): bool
     {
         $filename = $this->getFile($key);
 
-        if (file_exists($filename)) {
-            @unlink($filename);
+        return file_exists($filename) && @unlink($filename);
+    }
+
+    public function doDeleteItems(array $keys): bool
+    {
+        $ok = true;
+
+        foreach ($keys as $key) {
+            $ok = $this->doDeleteItem($key) && $ok;
         }
+
+        return $ok;
     }
 
     public function doFlush(): bool
