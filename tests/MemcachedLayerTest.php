@@ -73,7 +73,7 @@ class MemcachedLayerTest extends TestCase
     public function test_multiple()
     {
         $cache = $this->createMemcachedLayer('multiple');
-        $amount = 10;
+        $amount = 1000;
 
         for ($i = 1; $i <= $amount; $i++) {
             $cache->getItem('key_' . $i, function () {

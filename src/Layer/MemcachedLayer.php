@@ -49,7 +49,11 @@ class MemcachedLayer implements Cache
             $cacheItem = new CacheItem($this, $key, $value, true);
         } else {
             throw new \RuntimeException(
-                'MemcachedLayer client error: ' . $this->client->getResultMessage()
+                sprintf(
+                    'MemcachedLayer error: %d — %s',
+                    $this->client->getResultCode(),
+                    $this->client->getResultMessage()
+                )
             );
         }
 
