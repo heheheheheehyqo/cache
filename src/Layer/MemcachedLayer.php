@@ -24,15 +24,19 @@ class MemcachedLayer implements Cache
             throw new \RuntimeException('ext-memcached doesn\'t not exist');
         }
 
-        $this->client = new \Memcached();
+        $this->client = new \Memcached(md5($address));
 
-        $this->client->addServer($matches['host'], $matches['port']);
+        if (!count($this->client->getServerList())) {
+            $this->client->addServer($matches['host'], $matches['port']);
+        }
+
 
         $this->client->setOptions([
             \Memcached::OPT_PREFIX_KEY => $namespace . '_',
             \Memcached::OPT_NO_BLOCK => true,
             \Memcached::OPT_BINARY_PROTOCOL => true,
             \Memcached::OPT_TCP_NODELAY => true,
+            \Memcached::OPT_LIBKETAMA_COMPATIBLE => true,
         ]);
 
         $this->expiresAfter = $expiresAfter;
