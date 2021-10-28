@@ -37,14 +37,15 @@ class MemcachedLayer implements Cache
     {
         $data = $this->client->get($key, null, \Memcached::GET_EXTENDED);
 
-        if (!is_array($data)) {
-            throw new \Exception(json_encode($this->client->getVersion()));
-        }
-        if ($this->client->getResultCode() === \Memcached::RES_NOTFOUND) {
+        $code = $this->client->getResultCode();
+
+        if ($code === \Memcached::RES_NOTFOUND) {
             $cacheItem = new CacheItem($this, $key, null, false);
             $cacheItem->setMeta('cas', $data['cas']);
-        } else {
+        } elseif ($code === \Memcached::RES_SUCCESS) {
             $cacheItem = new CacheItem($this, $key, $data['value'], true);
+        } else {
+            throw new \RuntimeException('MemcachedLayer client error: ' . $this->client->getResultMessage());
         }
 
         $cacheItem->setMeta('code', $this->client->getResultCode());
