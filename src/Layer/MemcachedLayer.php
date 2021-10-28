@@ -14,7 +14,7 @@ class MemcachedLayer implements Cache
 
     private $expiresAfter;
 
-    public function __construct(string $namespace = '@', int $expiresAfter = 0, string $address = 'localhost:11211')
+    public function __construct(string $namespace = '@', int $expiresAfter = 0, string $address = 'memcached:11211')
     {
         if (!preg_match('/^(?P<host>[\w.]+):(?P<port>[\d]+)$/', $address, $matches)) {
             throw new \InvalidArgumentException('Address must be "ip:port"');
