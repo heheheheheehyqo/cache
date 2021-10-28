@@ -17,6 +17,9 @@ jobs:
           extensions: memcached
           coverage: none
 
+      - uses: niden/actions-memcached@v7
+        id: memcached
+
       - uses: actions/checkout@v2
 
       - name: Validate composer.json and composer.lock
