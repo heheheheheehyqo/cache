@@ -42,3 +42,5 @@ jobs:
 
       - name: Run tests
         run: vendor/bin/phpunit
+        env:
+          MEMCACHED_HOST: localhost
