@@ -28,7 +28,10 @@ class MemcachedLayer implements Cache
 
         $this->client->addServer($matches['host'], $matches['port']);
 
-        $this->client->setOption(\Memcached::OPT_PREFIX_KEY, $namespace . '_');
+        $this->client->setOptions([
+            \Memcached::OPT_PREFIX_KEY => $namespace . '_',
+            \Memcached::OPT_NO_BLOCK => true,
+        ]);
 
         $this->expiresAfter = $expiresAfter;
     }
