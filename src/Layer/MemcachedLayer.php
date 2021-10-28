@@ -31,6 +31,8 @@ class MemcachedLayer implements Cache
         $this->client->setOptions([
             \Memcached::OPT_PREFIX_KEY => $namespace . '_',
             \Memcached::OPT_NO_BLOCK => true,
+            \Memcached::OPT_BINARY_PROTOCOL => true,
+            \Memcached::OPT_TCP_NODELAY => true,
         ]);
 
         $this->expiresAfter = $expiresAfter;
