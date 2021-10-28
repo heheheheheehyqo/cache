@@ -14,7 +14,7 @@ class MemcachedLayer implements Cache
 
     private $expiresAfter;
 
-    public function __construct(string $namespace = '@', int $expiresAfter = 0, string $address = 'memcached:11211')
+    public function __construct(string $namespace = '@', int $expiresAfter = 0, string $address = 'localhost:11211')
     {
         if (!preg_match('/^(?P<host>[\w.]+):(?P<port>[\d]+)$/', $address, $matches)) {
             throw new \InvalidArgumentException('Address must be "ip:port"');
@@ -37,6 +37,9 @@ class MemcachedLayer implements Cache
     {
         $data = $this->client->get($key, null, \Memcached::GET_EXTENDED);
 
+        if (!is_array($data)) {
+            throw new \Exception(json_encode($this->client->getVersion()));
+        }
         if ($this->client->getResultCode() === \Memcached::RES_NOTFOUND) {
             $cacheItem = new CacheItem($this, $key, null, false);
             $cacheItem->setMeta('cas', $data['cas']);

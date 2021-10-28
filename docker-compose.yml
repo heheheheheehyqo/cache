@@ -3,6 +3,8 @@ version: '3.7'
 services:
   memcached:
     image: memcached:alpine
+    ports:
+      - "11211:11211"
 
   php:
     image: akeylimepie/php-fpm:7.2-latest-dev
