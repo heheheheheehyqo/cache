@@ -35,15 +35,14 @@ class MemcachedLayer implements Cache
 
     public function getItem(string $key, ?Closure $computeValue = null): CacheItem
     {
-        $data = $this->client->get($key, null, \Memcached::GET_EXTENDED);
+        $value = $this->client->get($key);
 
         $code = $this->client->getResultCode();
 
         if ($code === \Memcached::RES_NOTFOUND) {
             $cacheItem = new CacheItem($this, $key, null, false);
-            $cacheItem->setMeta('cas', $data['cas']);
         } elseif ($code === \Memcached::RES_SUCCESS) {
-            $cacheItem = new CacheItem($this, $key, $data['value'], true);
+            $cacheItem = new CacheItem($this, $key, $value, true);
         } else {
             throw new \RuntimeException(
                 'MemcachedLayer client error: ' . $this->client->getResultMessage()
