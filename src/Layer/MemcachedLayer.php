@@ -46,7 +46,7 @@ class MemcachedLayer implements Cache
             $cacheItem = new CacheItem($this, $key, $data['value'], true);
         } else {
             throw new \RuntimeException(
-                json_encode(getenv('MEMCACHED_HOST')) . json_encode($_ENV) . 'MemcachedLayer client error: ' . $this->client->getResultMessage()
+                'MemcachedLayer client error: ' . $this->client->getResultMessage()
             );
         }
 

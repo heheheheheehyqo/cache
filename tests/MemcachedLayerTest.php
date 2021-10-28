@@ -25,7 +25,7 @@ class MemcachedLayerTest extends TestCase
             $this->pool[] = $namespace;
         }
 
-        $address = sprintf('%s:11211', $_ENV['MEMCACHED_HOST'] ?? 'memcached');
+        $address = sprintf('%s:11211', getenv('MEMCACHED_HOST') ?? 'memcached');
 
         return new MemcachedLayer($namespace, $expiresAfter, $address);
     }
