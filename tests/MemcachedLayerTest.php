@@ -33,10 +33,10 @@ class MemcachedLayerTest extends TestCase
     public function test_write()
     {
         $cache = $this->createMemcachedLayer('@');
-        $cache->getItem('bar', function () {
-            return 'foo';
+        $cache->getItem('foo', function () {
+            return 'bar';
         });
-        $this->assertTrue($cache->getItem('bar')->isHit());
+        $this->assertTrue($cache->getItem('foo')->isHit());
     }
 
     public function test_read()
@@ -79,8 +79,10 @@ class MemcachedLayerTest extends TestCase
         $collection = $cache->getItems($range);
 
         foreach ($range as $i) {
-            $collection->get($i)->lazy()->set('bar');
+            $collection->getItem($i)->lazy()->set('bar');
         }
+
+        $this->assertFalse($cache->getItem($amount)->isHit());
 
         $cache->persist();
 
@@ -96,25 +98,32 @@ class MemcachedLayerTest extends TestCase
     {
         $cache = $this->createMemcachedLayer('expiry');
 
-        for ($i = 1; $i <= 2; $i++) {
-            $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use ($i) {
-                $cacheItem->expiresAfter(-1);
+        $cache->getItem('expiry', static function (CacheItem $cacheItem) {
+            $cacheItem->expiresAfter(2);
 
-                return 'i: ' . $i;
-            });
-        }
+            return 'foo';
+        });
 
-        $this->assertEquals('i: 2', $item->get());
+        sleep(1);
+        $this->assertTrue($cache->getItem('expiry')->isHit());
 
-        $cache = $this->createMemcachedLayer('expiry', 60);
+        sleep(1);
+        $this->assertFalse($cache->getItem('expiry')->isHit());
+    }
 
-        for ($i = 1; $i <= 2; $i++) {
-            $item = $cache->getItem('expiry', static function () use ($i) {
-                return 'i: ' . $i;
-            });
-        }
+    public function test_expiry_namespace()
+    {
+        $cache = $this->createMemcachedLayer('expiry', 2);
 
-        $this->assertEquals('i: 1', $item->get());
+        $cache->getItem('expiry', static function () {
+            return 'foo';
+        });
+
+        sleep(1);
+        $this->assertTrue($cache->getItem('expiry')->isHit());
+
+        sleep(1);
+        $this->assertFalse($cache->getItem('expiry')->isHit());
     }
 
     public function test_flush()

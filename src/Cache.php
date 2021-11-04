@@ -8,9 +8,10 @@ interface Cache
 
     public function getItems(array $keys): Collection;
 
-    public function save(CacheItem $cacheItem): void;
+    /** @param CacheItem[] $items */
+    public function save(array $items): bool;
 
-    public function persist(): void;
+    public function persist(): bool;
 
     public function deleteItem(string $key): bool;
 

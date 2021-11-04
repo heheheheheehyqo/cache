@@ -2,7 +2,7 @@
 
 namespace PHPSTORM_META {
 
-    registerArgumentsSet('meta_key', 'file');
+    registerArgumentsSet('meta_key', 'file', 'siblings');
 
     expectedArguments(\Hyqo\Cache\CacheItem::getMeta(), 0, argumentsSet('meta_key'));
     expectedArguments(\Hyqo\Cache\CacheItem::setMeta(), 0, argumentsSet('meta_key'));

@@ -15,7 +15,9 @@ class CacheItem
 
     private $isLazy = false;
 
-    private $expiry = 0;
+    private $expiresAt = 0;
+
+    private $expiresAfter = 0;
 
     private $meta = [];
 
@@ -32,11 +34,6 @@ class CacheItem
         return $this->key;
     }
 
-    public function getExpiry(): int
-    {
-        return $this->expiry;
-    }
-
     public function get()
     {
         return $this->value;
@@ -46,9 +43,14 @@ class CacheItem
     {
         $this->value = $value;
 
-        $this->cache->save($this);
+        $this->cache->save([$this]);
 
         return $this;
+    }
+
+    public function save(): bool
+    {
+        return $this->cache->save([$this]);
     }
 
     public function delete(): void
@@ -85,21 +87,41 @@ class CacheItem
         return $this->isLazy;
     }
 
-    public function isExpired(): bool
+    public function getExpiresAt(): int
     {
-        return ($this->expiry && $this->expiry < time());
+        return $this->expiresAt;
+    }
+
+    public function getExpiresAfter(): int
+    {
+        return $this->expiresAfter;
+    }
+
+    public function hasExpiry(): bool
+    {
+        return $this->expiresAfter || $this->expiresAt;
+    }
+
+    public function resetExpiry(): self
+    {
+        $this->expiresAt = 0;
+        $this->expiresAfter = 0;
+
+        return $this;
     }
 
     public function expiresAt(int $timestamp): self
     {
-        $this->expiry = $timestamp;
+        $this->expiresAt = $timestamp;
+        $this->expiresAfter = $timestamp - time();
 
         return $this;
     }
 
     public function expiresAfter(int $seconds): self
     {
-        $this->expiresAt(time() + $seconds);
+        $this->expiresAt = time() + $seconds;
+        $this->expiresAfter = $seconds;
 
         return $this;
     }

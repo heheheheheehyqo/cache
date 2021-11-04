@@ -88,13 +88,13 @@ class FilesystemLayerTest extends TestCase
     public function test_multiple()
     {
         $cache = new FilesystemLayer('multiple', 0, $this->cacheRoot);
-        $amount = 1000;
+        $amount = 10;
         $range = range(1, $amount);
 
         $collection = $cache->getItems($range);
 
         foreach ($range as $i) {
-            $collection->get($i)->lazy()->set('bar');
+            $collection->getItem($i)->lazy()->set('bar');
         }
 
         $cache->persist();
@@ -107,30 +107,43 @@ class FilesystemLayerTest extends TestCase
         $this->assertFalse($cache->getItem($amount)->isHit());
     }
 
-    public function test_expiry()
+    public function test_expiry_item()
     {
         $cache = new FilesystemLayer('expiry', 0, $this->cacheRoot);
-        $number = 0;
 
         for ($i = 1; $i <= 2; $i++) {
-            $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use (&$number) {
+            $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use ($i) {
                 $cacheItem->expiresAfter(-1);
 
-                return 'number: ' . $number++;
+                return 'i: ' . $i;
             });
         }
 
-        $this->assertEquals($item->get(), 'number: 1');
+        $this->assertEquals('i: 2', $item->get());
 
+
+        for ($i = 1; $i <= 2; $i++) {
+            $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use ($i) {
+                $cacheItem->expiresAfter(1);
+
+                return 'i: ' . $i;
+            });
+        }
+
+        $this->assertEquals('i: 1', $item->get());
+    }
+
+    public function test_expiry_namespace()
+    {
         $cache = new FilesystemLayer('expiry', 60, $this->cacheRoot);
 
         for ($i = 1; $i <= 2; $i++) {
-            $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use (&$number) {
-                return 'number: ' . $number++;
+            $item = $cache->getItem('expiry', static function () use ($i) {
+                return 'i: ' . $i;
             });
         }
 
-        $this->assertEquals($item->get(), 'number: 2');
+        $this->assertEquals('i: 1', $item->get());
     }
 
     public function test_flush()
