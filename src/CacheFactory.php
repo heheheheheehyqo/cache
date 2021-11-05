@@ -13,9 +13,14 @@ class CacheFactory
         string $memcachedAddress,
         string $filesystemDirectory
     ) {
-        return new CacheChain([
-            new MemcachedLayer($namespace, $lifetime, $memcachedAddress),
-            new FilesystemLayer($namespace, $lifetime, $filesystemDirectory)
-        ]);
+        $pools = [];
+
+        if (class_exists('Memcached')) {
+            $pools[] = new MemcachedLayer($namespace, $lifetime, $memcachedAddress);
+        }
+
+        $pools[] = new FilesystemLayer($namespace, $lifetime, $filesystemDirectory);
+
+        return new CacheChain($pools);
     }
 }
