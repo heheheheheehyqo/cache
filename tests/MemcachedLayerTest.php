@@ -57,17 +57,9 @@ class MemcachedLayerTest extends TestCase
         $item = $cache->getItem('key_for_delete', function () {
             return 'value_for_delete';
         });
-        $item->delete();
+        $cache->deleteItem($item->key());
 
         $this->assertFalse($cache->getItem('key_for_delete')->isHit());
-
-        $another_item = $cache->getItem('another_key_for_delete', function () {
-            return 'another_value_for_delete';
-        });
-
-        $cache->deleteItem($another_item->getKey());
-
-        $this->assertFalse($cache->getItem('another_key_for_delete')->isHit());
     }
 
     public function test_multiple()

@@ -2,15 +2,15 @@
 
 namespace Hyqo\Cache\Layer;
 
-use Hyqo\Cache\Cache;
+use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
-use Hyqo\Cache\Client;
+use Hyqo\Cache\ClientInterface;
 use Hyqo\Cache\Client\FilesystemClient;
 use Hyqo\Cache\Collection;
 
-class FilesystemLayer implements Cache
+class FilesystemLayer implements CacheInterface
 {
-    /** @var Client */
+    /** @var ClientInterface */
     private $client;
 
     public function __construct(?string $namespace = null, int $lifetime = 0, ?string $directory = null)
@@ -39,11 +39,6 @@ class FilesystemLayer implements Cache
     public function save(array $items): bool
     {
         return $this->client->doSave($items);
-    }
-
-    public function persist(): bool
-    {
-        return false;
     }
 
     public function deleteItem(string $key): bool

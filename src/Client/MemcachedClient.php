@@ -3,12 +3,12 @@
 namespace Hyqo\Cache\Client;
 
 use Closure;
-use Hyqo\Cache\Cache;
+use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
-use Hyqo\Cache\Client;
+use Hyqo\Cache\ClientInterface;
 use Hyqo\Cache\Collection;
 
-class MemcachedClient implements Client
+class MemcachedClient implements ClientInterface
 {
     /** @var \Memcached */
     private $connection;
@@ -21,7 +21,7 @@ class MemcachedClient implements Client
     private $lazyStorage = [];
 
     public function __construct(
-        Cache $pool,
+        CacheInterface $pool,
         string $namespace = '@',
         int $lifetime = 0,
         string $address = 'memcached:11211'
@@ -95,10 +95,10 @@ class MemcachedClient implements Client
         $code = $this->connection->getResultCode();
 
         if ($code === \Memcached::RES_SUCCESS) {
-            $cacheItem = new CacheItem($this, $key, $data['value'], true);
+            $cacheItem = new CacheItem($this->pool, $key, $data['value'], true);
             $cacheItem->setMeta('cas', $data['cas']);
         } elseif ($code === \Memcached::RES_NOTFOUND) {
-            $cacheItem = new CacheItem($this, $key, null, false);
+            $cacheItem = new CacheItem($this->pool, $key, null, false);
         } else {
             throw new \RuntimeException(
                 sprintf(
@@ -140,9 +140,9 @@ class MemcachedClient implements Client
             }
 
             if (isset($valuesByExpiration[$expiration])) {
-                $valuesByExpiration[$expiration][$item->getKey()] = $item->get();
+                $valuesByExpiration[$expiration][$item->key()] = $item->get();
             } else {
-                $valuesByExpiration[$expiration] = [$item->getKey() => $item->get()];
+                $valuesByExpiration[$expiration] = [$item->key() => $item->get()];
             }
         }
 

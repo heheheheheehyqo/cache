@@ -2,12 +2,12 @@
 
 namespace Hyqo\Cache\Client;
 
-use Hyqo\Cache\Cache;
+use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
-use Hyqo\Cache\Client;
+use Hyqo\Cache\ClientInterface;
 use Hyqo\Cache\Collection;
 
-class FilesystemClient implements Client
+class FilesystemClient implements ClientInterface
 {
     private $pool;
 
@@ -17,8 +17,12 @@ class FilesystemClient implements Client
     /** @var string */
     private $directory;
 
-    public function __construct(Cache $pool, ?string $namespace = null, int $lifetime = 0, ?string $directory = null)
-    {
+    public function __construct(
+        CacheInterface $pool,
+        ?string $namespace = null,
+        int $lifetime = 0,
+        ?string $directory = null
+    ) {
         if ($directory === null) {
             $directory = sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'hyqo-cache';
         } else {
@@ -85,7 +89,7 @@ class FilesystemClient implements Client
         $ok = true;
 
         foreach ($items as $item) {
-            $file = $this->getFile($item->getKey());
+            $file = $this->getFile($item->key());
 
             $tmp = $this->directory . uniqid('', true);
 
@@ -122,7 +126,7 @@ class FilesystemClient implements Client
         foreach ($keys as $key) {
             $filename = $this->getFile($key);
 
-            $ok = (file_exists($filename) && @unlink($filename)) && $ok;
+            $ok = (!file_exists($filename) || @unlink($filename)) && $ok;
         }
 
         return $ok;

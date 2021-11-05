@@ -4,19 +4,19 @@ namespace Hyqo\Cache;
 
 class Collection implements \ArrayAccess
 {
-    /** @var Cache */
+    /** @var CacheInterface */
     private $pool;
 
     /** @var CacheItem[] */
     private $storage;
 
-    public function __construct(Cache $pool, array $storage = [])
+    public function __construct(CacheInterface $pool, array $storage = [])
     {
         $this->pool = $pool;
         $this->storage = $storage;
     }
 
-    public function getPool(): Cache
+    public function getPool(): CacheInterface
     {
         return $this->pool;
     }
@@ -32,7 +32,7 @@ class Collection implements \ArrayAccess
 
     public function add(CacheItem $item): CacheItem
     {
-        return $this->storage[$item->getKey()] = $item;
+        return $this->storage[$item->key()] = $item;
     }
 
     public function offsetExists($offset): bool
@@ -57,33 +57,5 @@ class Collection implements \ArrayAccess
     public function offsetUnset($offset): void
     {
         unset($this->storage[$offset]);
-    }
-
-
-    /** @return CacheItem[] */
-    public function getAll(): array
-    {
-        return $this->storage;
-    }
-
-    public function getKeys(): array
-    {
-        return array_keys($this->storage);
-    }
-
-    public function copyTo(Collection $collection): void
-    {
-        $cache = $collection->getPool();
-
-        foreach ($this->storage as $cacheItem) {
-            $collection->add($cacheItem)->lazy()->save();
-        }
-
-        $cache->persist();
-    }
-
-    public function getPairs(): array
-    {
-        return $this->storage;
     }
 }

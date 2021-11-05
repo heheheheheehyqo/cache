@@ -72,17 +72,9 @@ class FilesystemLayerTest extends TestCase
         $item = $cache->getItem('key_for_delete', function () {
             return 'value_for_delete';
         });
-        $item->delete();
+        $cache->deleteItem($item->key());
 
-        $this->assertFileNotExists($item->getMeta('file'), $item->getKey());
-
-        $another_item = $cache->getItem('another_key_for_delete', function () {
-            return 'another_value_for_delete';
-        });
-
-        $cache->deleteItem($another_item->getKey());
-
-        $this->assertFileNotExists($another_item->getMeta('file'));
+        $this->assertFileNotExists($item->getMeta('file'), $item->key());
     }
 
     public function test_multiple()
@@ -97,10 +89,7 @@ class FilesystemLayerTest extends TestCase
             $collection->getItem($i)->lazy()->set('bar');
         }
 
-        $cache->persist();
-
         $this->assertTrue($cache->getItem($amount)->isHit());
-
 
         $cache->deleteItems($range);
 

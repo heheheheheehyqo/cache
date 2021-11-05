@@ -2,7 +2,7 @@
 
 namespace Hyqo\Cache;
 
-interface Client
+interface ClientInterface
 {
     /**
      * @param string[] $keys

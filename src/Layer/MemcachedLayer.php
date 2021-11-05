@@ -3,12 +3,13 @@
 namespace Hyqo\Cache\Layer;
 
 use Closure;
-use Hyqo\Cache\Cache;
+use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
 use Hyqo\Cache\Client\MemcachedClient;
 use Hyqo\Cache\Collection;
+use Hyqo\Cache\LazieableInterface;
 
-class MemcachedLayer implements Cache, Lazieable
+class MemcachedLayer implements CacheInterface, LazieableInterface
 {
     /** @var MemcachedClient */
     private $client;

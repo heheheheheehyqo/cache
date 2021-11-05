@@ -4,8 +4,8 @@ namespace Hyqo\Cache;
 
 class CacheItem
 {
-    /** @var Cache */
-    private $cache;
+    /** @var CacheInterface */
+    private $pool;
 
     private $key;
 
@@ -21,15 +21,20 @@ class CacheItem
 
     private $meta = [];
 
-    public function __construct(Cache $cache, string $key, $value, bool $isHit)
+    public function __construct(CacheInterface $pool, string $key, $value, bool $isHit)
     {
-        $this->cache = $cache;
+        $this->pool = $pool;
         $this->key = $key;
         $this->value = $value;
         $this->isHit = $isHit;
     }
 
-    public function getKey(): string
+    public function pool(): CacheInterface
+    {
+        return $this->pool;
+    }
+
+    public function key(): string
     {
         return $this->key;
     }
@@ -43,19 +48,9 @@ class CacheItem
     {
         $this->value = $value;
 
-        $this->cache->save([$this]);
+        $this->pool->save([$this]);
 
         return $this;
-    }
-
-    public function save(): bool
-    {
-        return $this->cache->save([$this]);
-    }
-
-    public function delete(): void
-    {
-        $this->cache->deleteItem($this->getKey());
     }
 
     public function getMeta(string $key)
@@ -95,11 +90,6 @@ class CacheItem
     public function getExpiresAfter(): int
     {
         return $this->expiresAfter;
-    }
-
-    public function hasExpiry(): bool
-    {
-        return $this->expiresAfter || $this->expiresAt;
     }
 
     public function resetExpiry(): self
