@@ -62,14 +62,12 @@ class FilesystemClient implements ClientInterface
             } else {
                 [$expiresAt, $value] = $this->doRead($file);
 
-                $cacheItem = new CacheItem($this->pool, $key, $value, true);
-                $cacheItem->expiresAt($expiresAt);
+                $cacheItem = new CacheItem($this->pool, $key, $value, !$expiresAt || $expiresAt >= time());
             }
 
             $cacheItem->setMeta('file', $file);
 
-            if (!$cacheItem->isHit() || $cacheItem->getExpiresAt() < time()) {
-                $cacheItem->isHit() && $cacheItem->resetExpiry();
+            if (!$cacheItem->isHit()) {
                 $this->lifetime && $cacheItem->expiresAfter($this->lifetime);
 
                 if (null !== $handle) {
