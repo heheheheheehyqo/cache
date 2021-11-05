@@ -1,6 +1,6 @@
 <?php
 
-namespace Hyqo\Cache\Test\Chain;
+namespace Hyqo\Cache\Test;
 
 use Hyqo\Cache\CacheChain;
 use Hyqo\Cache\CacheItem;
