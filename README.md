@@ -1,4 +1,4 @@
-# package-skeleton 
+# cache
 ![Packagist Version](https://img.shields.io/packagist/v/hyqo/cache?style=flat-square)
 ![Packagist PHP Version Support](https://img.shields.io/packagist/php-v/hyqo/cache?style=flat-square)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hyqo/cache/run-tests?style=flat-square)
