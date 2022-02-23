@@ -30,16 +30,7 @@ class MemcachedLayerTest extends TestCase
         return new MemcachedLayer($namespace, $expiresAfter, $address);
     }
 
-    public function test_write()
-    {
-        $cache = $this->createMemcachedLayer('@');
-        $cache->getItem('foo', function () {
-            return 'bar';
-        });
-        $this->assertTrue($cache->getItem('foo')->isHit());
-    }
-
-    public function test_read()
+    public function test_write_read(): void
     {
         $cache = $this->createMemcachedLayer('@');
         $cache->getItem('foo', function () {
@@ -51,74 +42,48 @@ class MemcachedLayerTest extends TestCase
         $this->assertEquals($item->get(), 'bar');
     }
 
-    public function test_delete()
+    public function test_delete(): void
     {
         $cache = $this->createMemcachedLayer('@');
         $item = $cache->getItem('key_for_delete', function () {
             return 'value_for_delete';
         });
-        $cache->deleteItem($item->key());
+        $cache->delete($item->key());
 
         $this->assertFalse($cache->getItem('key_for_delete')->isHit());
     }
 
-    public function test_multiple()
-    {
-        $cache = $this->createMemcachedLayer('multiple');
-        $amount = 1000;
-        $range = range(1, $amount);
-
-        $collection = $cache->getItems($range);
-
-        foreach ($range as $i) {
-            $collection->getItem($i)->lazy()->set('bar');
-        }
-
-        $this->assertFalse($cache->getItem($amount)->isHit());
-
-        $cache->persist();
-
-        $this->assertTrue($cache->getItem($amount)->isHit());
-
-
-        $cache->deleteItems($range);
-
-        $this->assertFalse($cache->getItem($amount)->isHit());
-    }
-
-    public function test_expiry()
+    public function test_expiry(): void
     {
         $cache = $this->createMemcachedLayer('expiry');
 
         $cache->getItem('expiry', static function (CacheItem $cacheItem) {
-            $cacheItem->expiresAfter(2);
+            $cacheItem->setExpiresAfter(1);
 
             return 'foo';
         });
 
-        sleep(1);
         $this->assertTrue($cache->getItem('expiry')->isHit());
 
         sleep(1);
         $this->assertFalse($cache->getItem('expiry')->isHit());
     }
 
-    public function test_expiry_namespace()
+    public function test_expiry_namespace(): void
     {
-        $cache = $this->createMemcachedLayer('expiry', 2);
+        $cache = $this->createMemcachedLayer('expiry', 1);
 
         $cache->getItem('expiry', static function () {
             return 'foo';
         });
 
-        sleep(1);
         $this->assertTrue($cache->getItem('expiry')->isHit());
 
         sleep(1);
         $this->assertFalse($cache->getItem('expiry')->isHit());
     }
 
-    public function test_flush()
+    public function test_flush(): void
     {
         $cacheFoo = $this->createMemcachedLayer('flush_foo');
         $cacheBar = $this->createMemcachedLayer('flush_bar');

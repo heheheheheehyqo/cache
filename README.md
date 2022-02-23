@@ -12,10 +12,25 @@ composer require hyqo/cache
 ## Usage
 ```php
 use Hyqo\Cache\Layer\FilesystemLayer;
+use Hyqo\Cache\CacheItem
 
 $cache = new FilesystemLayer('namespace', /*lifetime*/0, 'cache_dir');
 $item = $cache->getItem('key', function () {
-    return 'computed value if there is nothing in the cache';
+    return 'ageless cache';
 });
+
+$item = $cache->getItem('key', function (\Hyqo\Cache\CacheItem $cacheItem) {
+    $cacheItem->setExpiresAfter(60);
+
+    return 'value will be expired after 60 seconds';
+});
+
+//expected cache key creation unix time
+$item = $cache->getItemCreatedAfter(12345678, 'key', function (\Hyqo\Cache\CacheItem $cacheItem) {
+    $cacheItem->setExpiresAfter(60);
+
+    return 'value will be expired after 60 seconds';
+});
+
 $value = $item->get();
 ```

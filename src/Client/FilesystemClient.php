@@ -2,12 +2,13 @@
 
 namespace Hyqo\Cache\Client;
 
-use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
-use Hyqo\Cache\ClientInterface;
-use Hyqo\Cache\Collection;
+use Hyqo\Cache\CacheClientInterface;
+use Hyqo\Cache\CacheLayerInterface;
+use Hyqo\Cache\Meta;
 
-class FilesystemClient implements ClientInterface
+/** @internal */
+class FilesystemClient implements CacheClientInterface
 {
     private $pool;
 
@@ -18,7 +19,7 @@ class FilesystemClient implements ClientInterface
     private $directory;
 
     public function __construct(
-        CacheInterface $pool,
+        CacheLayerInterface $pool,
         ?string $namespace = null,
         int $lifetime = 0,
         ?string $directory = null
@@ -26,7 +27,7 @@ class FilesystemClient implements ClientInterface
         if ($directory === null) {
             $directory = sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'hyqo-cache';
         } else {
-            $directory = realpath($directory) ?: $directory;
+            $directory = (string)realpath($directory) ?: $directory;
         }
 
         if ($namespace === null) {
@@ -35,6 +36,7 @@ class FilesystemClient implements ClientInterface
 
         $directory .= \DIRECTORY_SEPARATOR . $namespace;
 
+        /** @noinspection MkdirRaceConditionInspection */
         if (!is_dir($directory) && !mkdir($directory, 0777, true)) {
             throw new \InvalidArgumentException(sprintf('Can\'t create directory (%s).', $directory));
         }
@@ -49,36 +51,32 @@ class FilesystemClient implements ClientInterface
         return $this->directory . md5($key);
     }
 
-    /** @inheritDoc */
-    public function doFetch(array $keys, ?\Closure $handle = null): Collection
+    public function doFetch(string $key, ?\Closure $handle, int $minCreationTime = null): CacheItem
     {
-        $collection = new Collection($this->pool);
+        $file = $this->getFile($key);
 
-        foreach ($keys as $key) {
-            $file = $this->getFile($key);
+        if (!file_exists($file)) {
+            $cacheItem = new CacheItem($this->pool, $key, null, false);
+        } else {
+            [$meta, $value] = $this->doRead($file);
+            [$version, $createdAt, $expiresAt] = Meta::unpack($meta);
 
-            if (!file_exists($file)) {
-                $cacheItem = new CacheItem($this->pool, $key, null, false);
-            } else {
-                [$expiresAt, $value] = $this->doRead($file);
+            $isHit = Meta::isHit($version, $createdAt, $expiresAt, $minCreationTime);
 
-                $cacheItem = new CacheItem($this->pool, $key, $value, !$expiresAt || $expiresAt >= time());
-            }
-
+            $cacheItem = new CacheItem($this->pool, $key, $value, $isHit, $createdAt);
+            $cacheItem->setExpiresAt($expiresAt);
             $cacheItem->setMeta('file', $file);
-
-            if (!$cacheItem->isHit()) {
-                $this->lifetime && $cacheItem->expiresAfter($this->lifetime);
-
-                if (null !== $handle) {
-                    $handle($cacheItem);
-                }
-            }
-
-            $collection->add($cacheItem);
         }
 
-        return $collection;
+        if (!$cacheItem->isHit()) {
+            $this->lifetime && $cacheItem->setExpiresAfter($this->lifetime);
+
+            if (null !== $handle) {
+                $handle($cacheItem);
+            }
+        }
+
+        return $cacheItem;
     }
 
     /** @param CacheItem[] $items */
@@ -86,12 +84,15 @@ class FilesystemClient implements ClientInterface
     {
         $ok = true;
 
-        foreach ($items as $item) {
-            $file = $this->getFile($item->key());
+        foreach ($items as $cacheItem) {
+            $file = $this->getFile($cacheItem->key());
 
-            $tmp = $this->directory . uniqid('', true);
+            $ok = (@file_put_contents(
+                        $tmp = $this->directory . uniqid('', true),
+                        $cacheItem->pack()
+                    ) !== false) && $ok;
 
-            $ok = (@file_put_contents($tmp, $item->getExpiresAt() . PHP_EOL . $item->get()) !== false) && $ok;
+            $cacheItem->setMeta('file', $file);
 
             $renameResult = @rename($tmp, $file);
             $ok = $renameResult && $ok;
@@ -106,28 +107,22 @@ class FilesystemClient implements ClientInterface
 
     private function doRead(string $file): array
     {
-        if (!$handle = @fopen($file, 'rb')) {
+        if (!$res = @fopen($file, 'rb')) {
             throw new \InvalidArgumentException(sprintf('File (%s) is unreadable', $file));
         }
 
-        $expiresAt = (int)fgets($handle);
-        $value = stream_get_contents($handle);
-        fclose($handle);
+        $meta = fgets($res);
+        $value = stream_get_contents($res);
+        fclose($res);
 
-        return [$expiresAt, $value];
+        return [$meta, $value];
     }
 
-    public function doDelete(array $keys): bool
+    public function doDelete(string $key): bool
     {
-        $ok = true;
+        $filename = $this->getFile($key);
 
-        foreach ($keys as $key) {
-            $filename = $this->getFile($key);
-
-            $ok = (!file_exists($filename) || @unlink($filename)) && $ok;
-        }
-
-        return $ok;
+        return (!file_exists($filename) || @unlink($filename));
     }
 
     public function doFlush(): bool

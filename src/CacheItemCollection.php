@@ -2,21 +2,21 @@
 
 namespace Hyqo\Cache;
 
-class Collection implements \ArrayAccess
+class CacheItemCollection implements \ArrayAccess
 {
-    /** @var CacheInterface */
+    /** @var CacheLayerInterface */
     private $pool;
 
     /** @var CacheItem[] */
     private $storage;
 
-    public function __construct(CacheInterface $pool, array $storage = [])
+    public function __construct(CacheLayerInterface $pool, array $storage = [])
     {
         $this->pool = $pool;
         $this->storage = $storage;
     }
 
-    public function getPool(): CacheInterface
+    public function getPool(): CacheLayerInterface
     {
         return $this->pool;
     }

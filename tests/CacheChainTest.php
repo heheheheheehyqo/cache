@@ -19,7 +19,7 @@ class CacheChainTest extends TestCase
         }
     }
 
-    private function getNamespace(string $namespace)
+    private function getNamespace(string $namespace): string
     {
         return 'hyqo-cache-chain-test-' . $namespace;
     }
@@ -43,7 +43,7 @@ class CacheChainTest extends TestCase
         return $chainData;
     }
 
-    public function test_empty()
+    public function test_empty(): void
     {
         $chain = $this->createChain('@');
 
@@ -56,7 +56,7 @@ class CacheChainTest extends TestCase
         $this->assertTrue($chain['pool']['filesystem-double']->getItem('foo')->isHit());
     }
 
-    public function test_top_layer_exists()
+    public function test_top_layer_exists(): void
     {
         $chain = $this->createChain('@');
 
@@ -71,7 +71,7 @@ class CacheChainTest extends TestCase
         $this->assertFalse($chain['pool']['filesystem-double']->getItem('foo')->isHit());
     }
 
-    public function test_middle_layer_exists()
+    public function test_middle_layer_exists(): void
     {
         $chain = $this->createChain('@');
 
@@ -86,7 +86,7 @@ class CacheChainTest extends TestCase
         $this->assertFalse($chain['pool']['filesystem-double']->getItem('foo')->isHit());
     }
 
-    public function test_last_layer_exists()
+    public function test_last_layer_exists(): void
     {
         $chain = $this->createChain('@');
 
@@ -101,7 +101,7 @@ class CacheChainTest extends TestCase
         $this->assertTrue($chain['pool']['filesystem-double']->getItem('foo')->isHit());
     }
 
-    public function test_exists()
+    public function test_exists(): void
     {
         $chain = $this->createChain('@');
 
@@ -115,7 +115,7 @@ class CacheChainTest extends TestCase
         $this->assertEquals('bar', $item->get());
     }
 
-    public function test_not_exists()
+    public function test_not_exists(): void
     {
         $chain = $this->createChain('@');
 
@@ -124,7 +124,7 @@ class CacheChainTest extends TestCase
         $this->assertFalse($item->isHit());
     }
 
-    public function test_persist()
+    public function test_persist(): void
     {
         $chain = $this->createChain('@');
 
@@ -133,6 +133,7 @@ class CacheChainTest extends TestCase
 
         foreach ($range as $i) {
             $chain['pool']['memcached']->getItem($i, function (CacheItem $item) {
+                $item->setExpiresAfter(100);
                 $item->lazy();
 
                 return 'bar';
@@ -147,7 +148,7 @@ class CacheChainTest extends TestCase
         $this->assertInstanceOf(MemcachedLayer::class, $item->pool(), get_class($item->pool()));
     }
 
-    public function test_delete()
+    public function test_delete(): void
     {
         $chain = $this->createChain('@');
 
@@ -158,7 +159,9 @@ class CacheChainTest extends TestCase
             $chain['pool']['filesystem-double']->getItem($i)->lazy()->set('bar');
         }
 
-        $chain['chain']->deleteItems($range);
+        foreach ($range as $i) {
+            $chain['chain']->delete($i);
+        }
 
         $item = $chain['chain']->getItem('foo');
 

@@ -12,6 +12,7 @@ class FilesystemLayerTest extends TestCase
 
     public function tearDown(): void
     {
+//        return;
         if (is_dir($this->cacheRoot)) {
             foreach ($this->scan($this->cacheRoot) as $file) {
                 if (is_dir($file)) {
@@ -36,7 +37,7 @@ class FilesystemLayerTest extends TestCase
         }
     }
 
-    public function test_create_namespace_dir()
+    public function test_create_namespace_dir(): void
     {
         foreach (['@', 'test'] as $namespace) {
             new FilesystemLayer($namespace, 0, $this->cacheRoot);
@@ -45,16 +46,7 @@ class FilesystemLayerTest extends TestCase
         }
     }
 
-    public function test_write()
-    {
-        $cache = new FilesystemLayer('@', 0, $this->cacheRoot);
-        $item = $cache->getItem('bar', function () {
-            return 'foo';
-        });
-        $this->assertStringEqualsFile($item->getMeta('file'), '0' . PHP_EOL . 'foo');
-    }
-
-    public function test_read()
+    public function test_write_and_read(): void
     {
         $cache = new FilesystemLayer('@', 0, $this->cacheRoot);
         $cache->getItem('foo', function () {
@@ -66,43 +58,24 @@ class FilesystemLayerTest extends TestCase
         $this->assertEquals($item->get(), 'bar');
     }
 
-    public function test_delete()
+    public function test_delete(): void
     {
         $cache = new FilesystemLayer('@', 0, $this->cacheRoot);
         $item = $cache->getItem('key_for_delete', function () {
             return 'value_for_delete';
         });
-        $cache->deleteItem($item->key());
+        $cache->delete($item->key());
 
         $this->assertFileNotExists($item->getMeta('file'), $item->key());
     }
 
-    public function test_multiple()
-    {
-        $cache = new FilesystemLayer('multiple', 0, $this->cacheRoot);
-        $amount = 10;
-        $range = range(1, $amount);
-
-        $collection = $cache->getItems($range);
-
-        foreach ($range as $i) {
-            $collection->getItem($i)->lazy()->set('bar');
-        }
-
-        $this->assertTrue($cache->getItem($amount)->isHit());
-
-        $cache->deleteItems($range);
-
-        $this->assertFalse($cache->getItem($amount)->isHit());
-    }
-
-    public function test_expiry_item()
+    public function test_expiry_item(): void
     {
         $cache = new FilesystemLayer('expiry', 0, $this->cacheRoot);
 
         for ($i = 1; $i <= 2; $i++) {
             $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use ($i) {
-                $cacheItem->expiresAfter(-1);
+                $cacheItem->setExpiresAfter(-1);
 
                 return 'i: ' . $i;
             });
@@ -113,7 +86,7 @@ class FilesystemLayerTest extends TestCase
 
         for ($i = 1; $i <= 2; $i++) {
             $item = $cache->getItem('expiry', static function (CacheItem $cacheItem) use ($i) {
-                $cacheItem->expiresAfter(1);
+                $cacheItem->setExpiresAfter(1);
 
                 return 'i: ' . $i;
             });
@@ -122,7 +95,7 @@ class FilesystemLayerTest extends TestCase
         $this->assertEquals('i: 1', $item->get());
     }
 
-    public function test_expiry_namespace()
+    public function test_expiry_namespace(): void
     {
         $cache = new FilesystemLayer('expiry', 60, $this->cacheRoot);
 
@@ -135,7 +108,7 @@ class FilesystemLayerTest extends TestCase
         $this->assertEquals('i: 1', $item->get());
     }
 
-    public function test_flush()
+    public function test_flush(): void
     {
         $cache = new FilesystemLayer('flush', 0, $this->cacheRoot);
 
@@ -150,6 +123,28 @@ class FilesystemLayerTest extends TestCase
         $files = iterator_to_array($this->scan($this->cacheRoot . \DIRECTORY_SEPARATOR . 'flush'));
 
         $this->assertEquals(count($files), 0);
+    }
+
+    public function test_created_after(): void
+    {
+        $time = time();
+        $expectedValue = 1;
+
+        $cache = new FilesystemLayer('created_after', 100, $this->cacheRoot);
+
+        for ($i = 1; $i <= 3; $i++) {
+            if ($i === 3) {
+                sleep(1);
+                $time = time();
+                $expectedValue = $i;
+            }
+
+            $item = $cache->getItemCreatedAfter($time, 'file', function () use ($time, $i) {
+                return $i;
+            });
+
+            $this->assertEquals((string)$expectedValue, $item->get());
+        }
     }
 
 }

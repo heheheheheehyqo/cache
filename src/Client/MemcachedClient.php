@@ -2,13 +2,13 @@
 
 namespace Hyqo\Cache\Client;
 
-use Closure;
-use Hyqo\Cache\CacheInterface;
 use Hyqo\Cache\CacheItem;
-use Hyqo\Cache\ClientInterface;
-use Hyqo\Cache\Collection;
+use Hyqo\Cache\CacheClientInterface;
+use Hyqo\Cache\CacheLayerInterface;
+use Hyqo\Cache\Meta;
 
-class MemcachedClient implements ClientInterface
+/** @internal */
+class MemcachedClient implements CacheClientInterface
 {
     /** @var \Memcached */
     private $connection;
@@ -21,10 +21,10 @@ class MemcachedClient implements ClientInterface
     private $lazyStorage = [];
 
     public function __construct(
-        CacheInterface $pool,
+        CacheLayerInterface $pool,
         string $namespace = '@',
         int $lifetime = 0,
-        string $address = 'memcached:11211'
+        string $address = '127.0.0.1:11211'
     ) {
         if (!preg_match('/^(?P<host>[\w.]+):(?P<port>[\d]+)$/', $address, $matches)) {
             throw new \InvalidArgumentException('Address must be "ip:port"');
@@ -53,49 +53,20 @@ class MemcachedClient implements ClientInterface
         $this->lifetime = $lifetime;
     }
 
-    public function doFetch(array $keys, ?\Closure $handle = null): Collection
-    {
-        $collection = new Collection($this->pool);
-
-        $values = $this->connection->getMulti($keys, \Memcached::GET_EXTENDED);
-
-        foreach ($values as $key => $data) {
-            $collection->add($this->createItem($key, $data));
-        }
-
-        foreach (array_diff($keys, array_keys($values)) as $key) {
-            $collection->add($this->createItem($key, null, $handle));
-        }
-
-        return $collection;
-    }
-
-    private function createItem(string $key, ?array $data, ?\Closure $handle = null)
-    {
-        if ($data === null) {
-            $item = new CacheItem($this->pool, $key, null, false);
-            $this->lifetime && $item->expiresAfter($this->lifetime);
-
-            if (null !== $handle) {
-                $handle($item);
-            }
-        } else {
-            $item = new CacheItem($this->pool, $key, $data['value'], true);
-            $item->setMeta('cas', $data['cas']);
-        }
-
-        return $item;
-    }
-
-
-    public function getItem(string $key, ?Closure $computeValue = null): CacheItem
+    public function doFetch(string $key, ?\Closure $handle, int $minCreationTime = null): CacheItem
     {
         $data = $this->connection->get($key, null, \Memcached::GET_EXTENDED);
 
         $code = $this->connection->getResultCode();
 
         if ($code === \Memcached::RES_SUCCESS) {
-            $cacheItem = new CacheItem($this->pool, $key, $data['value'], true);
+            [$meta, $value] = $this->doRead($data['value']);
+            [$version, $createdAt, $expiresAt] = Meta::unpack($meta);
+
+            $isHit = Meta::isHit($version, $createdAt, $expiresAt, $minCreationTime);
+
+            $cacheItem = new CacheItem($this->pool, $key, $value, $isHit, $createdAt);
+            $cacheItem->setExpiresAt($expiresAt);
             $cacheItem->setMeta('cas', $data['cas']);
         } elseif ($code === \Memcached::RES_NOTFOUND) {
             $cacheItem = new CacheItem($this->pool, $key, null, false);
@@ -109,18 +80,25 @@ class MemcachedClient implements ClientInterface
             );
         }
 
-        $cacheItem->setMeta('code', $this->connection->getResultCode());
-
         if (!$cacheItem->isHit()) {
-            $this->lifetime && $cacheItem->expiresAfter($this->lifetime);
+            $this->lifetime && $cacheItem->setExpiresAfter($this->lifetime);
 
-            if (null !== $computeValue) {
-                $value = $computeValue($cacheItem);
-                $cacheItem->set($value);
+            if (null !== $handle) {
+                $handle($cacheItem);
             }
         }
 
         return $cacheItem;
+    }
+
+    private function doRead(string $raw): array
+    {
+        $parts = explode("\n", $raw, 2);
+
+        $meta = $parts[0];
+        $value = $parts[1] ?? '';
+
+        return [$meta, $value];
     }
 
     /** @param CacheItem[] $items */
@@ -140,9 +118,9 @@ class MemcachedClient implements ClientInterface
             }
 
             if (isset($valuesByExpiration[$expiration])) {
-                $valuesByExpiration[$expiration][$item->key()] = $item->get();
+                $valuesByExpiration[$expiration][$item->key()] = $item->pack();
             } else {
-                $valuesByExpiration[$expiration] = [$item->key() => $item->get()];
+                $valuesByExpiration[$expiration] = [$item->key() => $item->pack()];
             }
         }
 
@@ -155,9 +133,9 @@ class MemcachedClient implements ClientInterface
         return $ok;
     }
 
-    public function doDelete(array $keys): bool
+    public function doDelete(string $key): bool
     {
-        return count($keys) === count($this->connection->deleteMulti($keys));
+        return $this->connection->delete($key);
     }
 
     public function doFlush(): bool

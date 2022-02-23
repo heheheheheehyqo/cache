@@ -4,16 +4,21 @@ namespace Hyqo\Cache;
 
 class CacheItem
 {
-    /** @var CacheInterface */
+    public const VERSION = '2';
+
+    /** @var CacheLayerInterface */
     private $pool;
 
     private $key;
 
+    /** @var ?string */
     private $value;
 
     private $isHit;
 
     private $isLazy = false;
+
+    private $createdAt;
 
     private $expiresAt = 0;
 
@@ -21,15 +26,21 @@ class CacheItem
 
     private $meta = [];
 
-    public function __construct(CacheInterface $pool, string $key, $value, bool $isHit)
-    {
+    public function __construct(
+        CacheLayerInterface $pool,
+        ?string $key,
+        ?string $value,
+        bool $isHit,
+        ?int $createdAt = null
+    ) {
         $this->pool = $pool;
         $this->key = $key;
         $this->value = $value;
         $this->isHit = $isHit;
+        $this->createdAt = $createdAt ?? time();
     }
 
-    public function pool(): CacheInterface
+    public function pool(): CacheLayerInterface
     {
         return $this->pool;
     }
@@ -39,13 +50,14 @@ class CacheItem
         return $this->key;
     }
 
-    public function get()
+    public function get(): ?string
     {
         return $this->value;
     }
 
-    public function set($value): self
+    public function set(?string $value): self
     {
+        $this->createdAt = time();
         $this->value = $value;
 
         $this->pool->save([$this]);
@@ -92,27 +104,24 @@ class CacheItem
         return $this->expiresAfter;
     }
 
-    public function resetExpiry(): self
-    {
-        $this->expiresAt = 0;
-        $this->expiresAfter = 0;
-
-        return $this;
-    }
-
-    public function expiresAt(int $timestamp): self
+    public function setExpiresAt(int $timestamp): self
     {
         $this->expiresAt = $timestamp;
-        $this->expiresAfter = $timestamp - time();
+        $this->expiresAfter = $timestamp ? $timestamp - time() : 0;
 
         return $this;
     }
 
-    public function expiresAfter(int $seconds): self
+    public function setExpiresAfter(int $seconds): self
     {
-        $this->expiresAt = time() + $seconds;
+        $this->expiresAt = $seconds ? time() + $seconds : 0;
         $this->expiresAfter = $seconds;
 
         return $this;
+    }
+
+    public function pack(): string
+    {
+        return Meta::pack(self::VERSION, $this->createdAt, $this->expiresAt) . PHP_EOL . ($this->value ?? '');
     }
 }

@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class CacheFactoryTest extends TestCase
 {
-    public function test_chain()
+    public function test_chain(): void
     {
         $chain = CacheFactory::chain('foo', 99, 'memcached:11211', __DIR__ . '/../var');
 

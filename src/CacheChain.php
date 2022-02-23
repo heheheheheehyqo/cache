@@ -2,13 +2,13 @@
 
 namespace Hyqo\Cache;
 
-class CacheChain
+class CacheChain implements CacheLayerInterface
 {
-    /** @var CacheInterface[] */
+    /** @var CacheLayerInterface[] */
     private $pools;
 
     /**
-     * @param CacheInterface[] $pools
+     * @param CacheLayerInterface[] $pools
      */
     public function __construct(array $pools)
     {
@@ -19,30 +19,63 @@ class CacheChain
         $this->pools = $pools;
     }
 
-    public function getItem(string $key, ?\Closure $computeValue = null): CacheItem
+    public function getItemCreatedAfter(int $createdAt, string $key, ?\Closure $handle = null): CacheItem
     {
-        $copyItem = static function (CacheItem $item): CacheItem {
-            return (new CacheItem($item->pool(), $item->key(), $item->get(), false))
-                ->expiresAt($item->getExpiresAt());
-        };
+        $generator = $this->itemGenerator($handle);
 
+        /** @var CacheLayerInterface $pool */
+
+        while ($generator->valid()) {
+            $pool = $generator->current();
+            $cacheItem = $pool->getItemCreatedAfter($createdAt, $key);
+            $generator->send($cacheItem);
+        }
+
+        return $generator->getReturn();
+    }
+
+    public function getItem(string $key, ?\Closure $handle = null): CacheItem
+    {
+        $generator = $this->itemGenerator($handle);
+
+        /** @var CacheLayerInterface $pool */
+
+        while ($generator->valid()) {
+            $pool = $generator->current();
+            $cacheItem = $pool->getItem($key);
+            $generator->send($cacheItem);
+        }
+
+        return $generator->getReturn();
+    }
+
+    protected function itemGenerator(?\Closure $handle = null): \Generator
+    {
         foreach ($this->pools as $i => $pool) {
-            $item = $pool->getItem($key);
+            /** @var CacheItem $cacheItem */
+            $cacheItem = yield $pool;
 
-            if ($item->isHit()) {
+            if ($cacheItem->isHit()) {
                 while (--$i >= 0) {
-                    $this->pools[$i]->save([$copyItem($item)]);
+                    $this->pools[$i]->save([self::copyCacheItem($cacheItem)]);
                 }
 
-                return $item;
+                return $cacheItem;
             }
         }
 
-        if ($computeValue) {
-            $item->set($computeValue($item));
+        if (null !== $handle) {
+            $value = $handle($cacheItem);
+            $cacheItem->set($value);
         }
 
-        return $item;
+        return $cacheItem;
+    }
+
+    protected static function copyCacheItem(CacheItem $item): CacheItem
+    {
+        return (new CacheItem($item->pool(), $item->key(), $item->get(), false))
+            ->setExpiresAt($item->getExpiresAt());
     }
 
     public function persist(): bool
@@ -56,23 +89,12 @@ class CacheChain
         return true;
     }
 
-    public function deleteItem(string $key): bool
+    public function delete(string $key): bool
     {
         $ok = false;
 
         foreach ($this->pools as $cache) {
-            $ok = $cache->deleteItem($key) || $ok;
-        }
-
-        return $ok;
-    }
-
-    public function deleteItems(array $keys): bool
-    {
-        $ok = false;
-
-        foreach ($this->pools as $cache) {
-            $ok = $cache->deleteItems($keys) || $ok;
+            $ok = $cache->delete($key) || $ok;
         }
 
         return $ok;
@@ -87,5 +109,14 @@ class CacheChain
         }
 
         return $ok;
+    }
+
+    public function save(array $items): bool
+    {
+        foreach ($this->pools as $cache) {
+            $cache->save($items);
+        }
+
+        return true;
     }
 }
