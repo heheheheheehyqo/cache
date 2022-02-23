@@ -40,6 +40,11 @@ class CacheItem
         $this->createdAt = $createdAt ?? time();
     }
 
+    public function __toString()
+    {
+        return $this->value ?? '';
+    }
+
     public function pool(): CacheLayerInterface
     {
         return $this->pool;
@@ -122,6 +127,6 @@ class CacheItem
 
     public function pack(): string
     {
-        return Meta::pack(self::VERSION, $this->createdAt, $this->expiresAt) . PHP_EOL . ($this->value ?? '');
+        return Meta::pack(self::VERSION, $this->createdAt, $this->expiresAt) . PHP_EOL . $this;
     }
 }
