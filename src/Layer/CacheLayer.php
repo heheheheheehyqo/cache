@@ -39,12 +39,10 @@ abstract class CacheLayer implements CacheLayerInterface
     public function delete(string $key): bool
     {
         return $this->client->doDelete($key);
-        return true;
     }
 
     public function flush(): bool
     {
         return $this->client->doFlush();
-        return true;
     }
 }
