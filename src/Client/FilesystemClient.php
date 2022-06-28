@@ -36,10 +36,14 @@ class FilesystemClient implements CacheClientInterface
 
         $directory .= \DIRECTORY_SEPARATOR . $namespace;
 
+        $oldUmask = umask(0);
+
         /** @noinspection MkdirRaceConditionInspection */
         if (!is_dir($directory) && !mkdir($directory, 0777, true)) {
             throw new \InvalidArgumentException(sprintf('Can\'t create directory (%s).', $directory));
         }
+
+        umask($oldUmask);
 
         $this->pool = $pool;
         $this->lifetime = $lifetime;
